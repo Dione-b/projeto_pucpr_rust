@@ -52,13 +52,13 @@
         </p>
       </div>
 
-<h1>Upload de Arquivo CSV</h1>
+<h1 class="text-white">Upload de Arquivo CSV</h1> <br>
 <form id="upload-form">
-    <input type="file" id="csv-file" name="file" accept=".csv" required>
-    <button type="submit">Enviar CSV</button>
+    <input type="file" id="csv-file" class="text-white" name="file" accept=".csv" required>
+    <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-xl">Enviar CSV</button>
 </form>
 
-<div id="result"></div>
+<div id="result" class="text-white"></div>
 
 <script type="module">
     import init, { process_csv } from "./pkg/back.js";
