@@ -5,8 +5,9 @@ use serde::Deserialize;
 use std::collections::HashMap;
 use wasm_bindgen::prelude::*; // Import FutureExt to use methods like map on Futures
 
+#[allow(dead_code)]
 #[derive(Deserialize, Debug)]
-pub struct ExchangeRatesResponse {
+pub(crate) struct ExchangeRatesResponse {
     pub result: String,
     pub documentation: String,
     pub terms_of_use: String,
