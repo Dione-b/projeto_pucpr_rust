@@ -51,135 +51,47 @@
           curso de extensão da PUCPR.
         </p>
       </div>
-      <div class="flex justify-center items-center space-x-4">
-        <label for="amount" class="text-white">Moeda atual: R$</label>
-        <div>
-          <input
-            type="text"
-            id="amount"
-            class="block w-60 rounded-md border-0 py-1.5 pl-7 pr-20 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
-            placeholder="0.00"
-          />
-        </div>
 
-        <div>
-          <label for="target_currency" class="text-white"
-            >Moeda de destino:</label
-          >&nbsp;
-          <select
-            id="target_currency"
-            class="h-full rounded-md border-0 py-0 pl-2 pr-7 text-gray-500 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
-          >
-            <option value="USD">Dólar Americano (USD)</option>
-            <option value="EUR">Euro (EUR)</option>
-            <option value="GBP">Libra Esterlina (GBP)</option>
-            <option value="JPY">Iene Japonês (JPY)</option>
-            <option value="CHF">Franco Suíço (CHF)</option>
-            <option value="AUD">Dólar Australiano (AUD)</option>
-            <option value="CAD">Dólar Canadense (CAD)</option>
-          </select>
-        </div>
+<h1>Upload de Arquivo CSV</h1>
+<form id="upload-form">
+    <input type="file" id="csv-file" name="file" accept=".csv" required>
+    <button type="submit">Enviar CSV</button>
+</form>
 
-        <div>
-          <button
-            class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded"
-            onclick="convert()"
-          >
-            Converter
-          </button>
-        </div>
-      </div>
+<div id="result"></div>
 
-      <p id="result" class="text-center mt-4 text-white"></p>
-    </div>
-    <script type="module">
-      import init, { convert_currency } from "./pkg/back.js";
+<script type="module">
+    import init, { process_csv } from "./pkg/back.js";
 
-      // Esta variável garante que o Wasm esteja completamente carregado antes de usá-lo
-      let wasmReady = init();
+    document.getElementById("upload-form").onsubmit = async (event) => {
+        event.preventDefault();
 
-      // Defina a função convert no escopo global
-      window.convert = async function convert() {
-        // Aguarda o carregamento do WebAssembly
-        await wasmReady;
+        const fileInput = document.getElementById("csv-file");
+        const file = fileInput.files[0];
 
-        // Exemplo de JSON com a estrutura correta
-        const json_data = JSON.stringify({
-          moedas: [
-            {
-              nome: "Dólar Americano",
-              codigo: "USD",
-              cotacao: 5.7376,
-              variacao: 0.88,
-            },
-            { nome: "Euro", codigo: "EUR", cotacao: 6.1496, variacao: -0.01 },
-            {
-              nome: "Libra Esterlina",
-              codigo: "GBP",
-              cotacao: 7.4223,
-              variacao: -0.77,
-            },
-            {
-              nome: "Iene Japonês",
-              codigo: "JPY",
-              cotacao: 0.0376,
-              variacao: -0.2,
-            },
-            {
-              nome: "Franco Suíço",
-              codigo: "CHF",
-              cotacao: 6.5154,
-              variacao: 0.0,
-            },
-            {
-              nome: "Dólar Australiano",
-              codigo: "AUD",
-              cotacao: 3.7814,
-              variacao: -1.5,
-            },
-            {
-              nome: "Dólar Canadense",
-              codigo: "CAD",
-              cotacao: 4.3031,
-              variacao: -0.08,
-            },
-          ],
-        });
+        if (file) {
+            const reader = new FileReader();
 
-        // Exibe o JSON para depuração
-        console.log("JSON enviado:", json_data);
+            reader.onload = async (e) => {
+                const csvContent = e.target.result;
 
-        // Obter valores de entrada do usuário
-        const amount = document.getElementById("amount").value;
-        const target_currency =
-          document.getElementById("target_currency").value;
+                // Inicializa o módulo WebAssembly
+                await init();
 
-        // Executa a função de conversão
-        // Executa a função de conversão
-        try {
-          // A função convert_currency retorna uma Promise, então usamos await para esperar a resposta
-          const result = await convert_currency(
-            json_data,
-            amount,
-            target_currency
-          );
+                // Chama a função process_csv do WebAssembly e aguarda a resposta
+                const result = await process_csv(csvContent);
 
-          // Formatar o valor convertido usando o Intl.NumberFormat
-          const formatter = new Intl.NumberFormat("pt-BR", {
-            style: "currency",
-            currency: target_currency,
-          });
+                // Atualiza o conteúdo do div com o resultado
+                document.getElementById("result").innerText = result;
 
-          // Exibe o resultado da conversão com a formatação correta
-          document.getElementById(
-            "result"
-          ).textContent = `Resultado: ${formatter.format(result)}`;
-        } catch (error) {
-          // Se houver algum erro, exibe a mensagem de erro
-          console.error("Erro:", error);
-          document.getElementById("result").textContent = `Erro: ${error}`;
+                // Exibe o resultado no console para depuração
+                console.log(result);
+            };
+
+            reader.readAsText(file);
         }
-      };
-    </script>
+    };
+</script>
+
   </body>
 </html>

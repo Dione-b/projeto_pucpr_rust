@@ -1,54 +1,61 @@
-use serde::{Deserialize, Serialize};
+use reqwasm::http::Request;
 use wasm_bindgen::prelude::*;
 
-// Define a estrutura para cada moeda no JSON
-#[derive(Deserialize)]
-struct Moeda {
-    codigo: String,
-    cotacao: f64,
-    #[warn(dead_code)]
-    variacao: f64,
-}
-
-// Define a estrutura principal que contém a lista de moedas
-#[derive(serde::Deserialize)]
-struct ExchangeRates {
-    moedas: Vec<Moeda>,
-}
-
-// Função para converter o valor de entrada para a moeda desejada
 #[wasm_bindgen]
-pub fn convert_currency(
-    json_data: &str,
-    amount_str: &str,
-    target_currency: &str,
-) -> Result<String, JsValue> {
-    // Tenta parsear o JSON com as cotações
-    let exchange_data: Result<ExchangeRates, _> = serde_json::from_str(json_data);
+pub async fn process_csv(csv_content: &str) -> String {
+    let mut result = String::new();
+    let mut line_count = 0;
 
-    match exchange_data {
-        Ok(data) => {
-            // Converte a string de quantidade para um número
-            let amount: f64 = amount_str
-                .parse()
-                .map_err(|_| JsValue::from_str("Valor de entrada inválido"))?;
+    for line in csv_content.lines() {
+        let columns: Vec<&str> = line.split(';').collect();
 
-            // Busca a taxa de câmbio para a moeda desejada
-            let moeda = data
-                .moedas
-                .iter()
-                .find(|&m| m.codigo == target_currency)
-                .ok_or_else(|| JsValue::from_str("Moeda não encontrada"))?;
+        if columns.len() >= 2 {
+            let moeda_origem = columns[0].trim();
+            let moeda_destino = columns[1].trim();
 
-            // Calcula o valor convertido
-            let converted_value = amount / moeda.cotacao;
+            result.push_str(&format!(
+                "Linha {}: Moeda Origem = {}, Moeda Destino = {}\n",
+                line_count + 1,
+                moeda_origem,
+                moeda_destino
+            ));
 
-            // Retorna o valor convertido como string
-            Ok(format!("{:.2}", converted_value))
+            // Faz a chamada para a API
+            match fetch_exchange_rate(moeda_origem).await {
+                Ok(api_response) => {
+                    result.push_str(&format!("Resposta da API: {}\n", api_response));
+                }
+                Err(e) => {
+                    result.push_str(&format!("Erro ao chamar API\n"));
+                }
+            }
+        } else {
+            result.push_str(&format!("Linha {}: Formato inválido\n", line_count + 1));
         }
-        Err(e) => {
-            // Se o parse falhar, retorna o erro real do parse
-            Err(JsValue::from_str(&e.to_string()))
-        }
+
+        line_count += 1;
     }
+
+    format!(
+        "Processamento concluído! Número de linhas: {}\n{}",
+        line_count, result
+    )
+}
+
+async fn fetch_exchange_rate(currency: &str) -> Result<String, JsValue> {
+    let url = format!(
+        "https://v6.exchangerate-api.com/v6/41f3c6c0fcad995d00feee53/latest/{}",
+        currency
+    );
+    let response = Request::get(&url)
+        .send()
+        .await
+        .map_err(|e| JsValue::from_str(&format!("Error: {}", e)))?;
+
+    let text = response
+        .text()
+        .await
+        .map_err(|e| JsValue::from_str(&format!("Error parsing response: {}", e)))?;
+
+    Ok(text)
 }
